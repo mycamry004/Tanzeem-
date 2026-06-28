@@ -20,23 +20,31 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle Build Environment
+      - name: Find Project and Force Generate Gradle
         run: |
-          GRADLEW_PATH=$(find . -name "gradlew" -print -quit)
+          # Find where the actual app source files are located
+          SETTINGS_PATH=$(find . -name "settings.gradle" -o -name "settings.gradle.kts" -print -quit)
           
-          if [ -z "$GRADLEW_PATH" ]; then
-            echo "ERROR: 'gradlew' was not found anywhere in this repository!"
-            echo "Please make sure you uploaded the 'gradlew' file from your zip."
+          if [ -z "$SETTINGS_PATH" ]; then
+            echo "ERROR: Could not find settings.gradle anywhere in the repository!"
             exit 1
           fi
           
-          GRADLE_DIR=$(dirname "$GRADLEW_PATH")
-          echo "TARGET_DIR=$GRADLE_DIR" >> $GITHUB_ENV
+          PROJECT_ROOT=$(dirname "$SETTINGS_PATH")
+          echo "Android project root detected at: $PROJECT_ROOT"
+          cd "$PROJECT_ROOT"
+          
+          # Force generate the missing gradlew and gradle wrapper files
+          echo "Generating missing gradle wrapper wrapper..."
+          gradle wrapper --gradle-version 8.2
+          
+          # Make it executable and save path
+          chmod +x ./gradlew
+          echo "TARGET_DIR=$PROJECT_ROOT" >> $GITHUB_ENV
 
       - name: Run Build
         run: |
           cd ${{ env.TARGET_DIR }}
-          chmod +x ./gradlew
           ./gradlew assembleDebug
 
       - name: Upload APK Artifact
