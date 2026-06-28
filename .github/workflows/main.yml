@@ -22,15 +22,19 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: Tanzeem
 
       - name: Make Gradle executable
-        run: chmod +x ./gradlew
+        run: chmod +x ./Tanzeem/gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug
+        run: |
+          cd Tanzeem
+          ./gradlew assembleDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Tanzeem-Debug-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: Tanzeem/app/build/outputs/apk/debug/app-debug.apk
