@@ -42,9 +42,13 @@ jobs:
           PROJECT_ROOT=$(dirname "$SETTINGS_PATH")
           cd "$PROJECT_ROOT"
           
-          # Upgraded to 9.3.1 to completely satisfy the Android Gradle Plugin 9.1.1 requirement
+          # Force generate the required wrapper version
           gradle wrapper --gradle-version 9.3.1
           chmod +x ./gradlew
+          
+          # Force create the missing debug.keystore file required by debugConfig
+          echo "Generating temporary debug keystore..."
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           
           echo "TARGET_DIR=$PROJECT_ROOT" >> $GITHUB_ENV
 
