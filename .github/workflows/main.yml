@@ -42,17 +42,13 @@ jobs:
           PROJECT_ROOT=$(dirname "$SETTINGS_PATH")
           cd "$PROJECT_ROOT"
           
-          if [ ! -f "./gradlew" ]; then
-            gradle wrapper --gradle-version 8.2
-          fi
+          # Upgraded wrapper target to 8.5 to natively resolve the bcprov Multi-Release JAR bug
+          gradle wrapper --gradle-version 8.5
           chmod +x ./gradlew
           
           echo "TARGET_DIR=$PROJECT_ROOT" >> $GITHUB_ENV
 
-      - name: Run Build with Isolated Cache
-        env:
-          # This forces Gradle to use a local, high-permission directory for dependencies
-          GRADLE_USER_HOME: ${{ github.workspace }}/.gradle_home
+      - name: Run Build
         run: |
           cd ${{ env.TARGET_DIR }}
           ./gradlew assembleDebug --no-configuration-cache --no-daemon
@@ -62,5 +58,4 @@ jobs:
         with:
           name: Tanzeem-Debug-APK
           path: |
-            **/build/outputs/apk/debu
-            g/*.apk
+            **/build/outputs/apk/debug/*.apk
