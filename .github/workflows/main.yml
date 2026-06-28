@@ -20,31 +20,36 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Find Project and Force Generate Gradle
+      - name: Auto Create Missing Project Configuration
         run: |
-          # Find where the actual app source files are located
-          SETTINGS_PATH=$(find . -name "settings.gradle" -o -name "settings.gradle.kts" -print -quit)
-          
-          if [ -z "$SETTINGS_PATH" ]; then
-            echo "ERROR: Could not find settings.gradle anywhere in the repository!"
-            exit 1
+          # Create base files if they don't exist anywhere
+          if [ -z "$(find . -name "settings.gradle" -o -name "settings.gradle.kts")" ]; then
+            echo "Creating missing settings.gradle..."
+            echo "rootProject.name = 'Tanzeem'" > settings.gradle
+            echo "include ':app'" >> settings.gradle
           fi
-          
-          PROJECT_ROOT=$(dirname "$SETTINGS_PATH")
-          echo "Android project root detected at: $PROJECT_ROOT"
-          cd "$PROJECT_ROOT"
-          
-          # Force generate the missing gradlew and gradle wrapper files
-          echo "Generating missing gradle wrapper wrapper..."
+
+          if [ -z "$(find . -name "build.gradle" -o -name "build.gradle.kts" -not -path "*/app/*")" ]; then
+            echo "Creating missing root build.gradle..."
+            cat << 'EOF' > build.gradle
+            buildscript {
+                repositories { google(); mavenCentral() }
+                dependencies { classpath 'com.android.tools.build:gradle:8.2.0' }
+            }
+            allprojects {
+                repositories { google(); mavenCentral() }
+            }
+          EOF
+          fi
+
+          # Generate gradle wrapper files
           gradle wrapper --gradle-version 8.2
-          
-          # Make it executable and save path
+
+          # Make executable
           chmod +x ./gradlew
-          echo "TARGET_DIR=$PROJECT_ROOT" >> $GITHUB_ENV
 
       - name: Run Build
         run: |
-          cd ${{ env.TARGET_DIR }}
           ./gradlew assembleDebug
 
       - name: Upload APK Artifact
