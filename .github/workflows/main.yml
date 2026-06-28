@@ -20,20 +20,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Find and Build APK
+      - name: Setup Gradle Build Environment
         run: |
-          # Automatically find the directory containing gradlew
-          GRADLE_DIR=$(dirname $(find . -name gradlew -print -quit))
+          GRADLEW_PATH=$(find . -name "gradlew" -print -quit)
           
-          if [ -z "$GRADLE_DIR" ]; then
-            echo "Error: gradlew file could not be found anywhere in the repository!"
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "ERROR: 'gradlew' was not found anywhere in this repository!"
+            echo "Please make sure you uploaded the 'gradlew' file from your zip."
             exit 1
           fi
           
-          echo "Found Gradle root at: $GRADLE_DIR"
-          cd "$GRADLE_DIR"
-          
-          # Make executable and build
+          GRADLE_DIR=$(dirname "$GRADLEW_PATH")
+          echo "TARGET_DIR=$GRADLE_DIR" >> $GITHUB_ENV
+
+      - name: Run Build
+        run: |
+          cd ${{ env.TARGET_DIR }}
           chmod +x ./gradlew
           ./gradlew assembleDebug
 
