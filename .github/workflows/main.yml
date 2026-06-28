@@ -25,17 +25,13 @@ jobs:
           ZIP_FILE=$(find . -name "*.zip" -print -quit)
           
           if [ -z "$ZIP_FILE" ]; then
-            echo "=========================================================="
             echo "ERROR: No .zip file found in your repository!"
-            echo "Please upload your 'Tanzeem.zip' file directly to GitHub."
-            echo "=========================================================="
             exit 1
           fi
           
           echo "Found zip file: $ZIP_FILE"
           unzip -q "$ZIP_FILE" -d extracted_project
           
-          # Find where settings.gradle is inside the extracted files
           SETTINGS_PATH=$(find ./extracted_project -name "settings.gradle" -o -name "settings.gradle.kts" -print -quit)
           
           if [ -z "$SETTINGS_PATH" ]; then
@@ -44,10 +40,8 @@ jobs:
           fi
           
           PROJECT_ROOT=$(dirname "$SETTINGS_PATH")
-          echo "Android project root found at: $PROJECT_ROOT"
-          
-          # Make sure gradlew exists or generate it
           cd "$PROJECT_ROOT"
+          
           if [ ! -f "./gradlew" ]; then
             gradle wrapper --gradle-version 8.2
           fi
@@ -58,7 +52,8 @@ jobs:
       - name: Run Build
         run: |
           cd ${{ env.TARGET_DIR }}
-          ./gradlew assembleDebug
+          # Added flags to bypass the cache jar creation bug
+          ./gradlew assembleDebug --no-configuration-cache --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
