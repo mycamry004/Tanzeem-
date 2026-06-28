@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK From Zip
 
 on:
   push:
@@ -20,36 +20,44 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Auto Create Missing Project Configuration
+      - name: Find and Extract Project Zip
         run: |
-          # Create base files if they don't exist anywhere
-          if [ -z "$(find . -name "settings.gradle" -o -name "settings.gradle.kts")" ]; then
-            echo "Creating missing settings.gradle..."
-            echo "rootProject.name = 'Tanzeem'" > settings.gradle
-            echo "include ':app'" >> settings.gradle
+          ZIP_FILE=$(find . -name "*.zip" -print -quit)
+          
+          if [ -z "$ZIP_FILE" ]; then
+            echo "=========================================================="
+            echo "ERROR: No .zip file found in your repository!"
+            echo "Please upload your 'Tanzeem.zip' file directly to GitHub."
+            echo "=========================================================="
+            exit 1
           fi
-
-          if [ -z "$(find . -name "build.gradle" -o -name "build.gradle.kts" -not -path "*/app/*")" ]; then
-            echo "Creating missing root build.gradle..."
-            cat << 'EOF' > build.gradle
-            buildscript {
-                repositories { google(); mavenCentral() }
-                dependencies { classpath 'com.android.tools.build:gradle:8.2.0' }
-            }
-            allprojects {
-                repositories { google(); mavenCentral() }
-            }
-          EOF
+          
+          echo "Found zip file: $ZIP_FILE"
+          unzip -q "$ZIP_FILE" -d extracted_project
+          
+          # Find where settings.gradle is inside the extracted files
+          SETTINGS_PATH=$(find ./extracted_project -name "settings.gradle" -o -name "settings.gradle.kts" -print -quit)
+          
+          if [ -z "$SETTINGS_PATH" ]; then
+            echo "ERROR: Could not find settings.gradle inside the zip file!"
+            exit 1
           fi
-
-          # Generate gradle wrapper files
-          gradle wrapper --gradle-version 8.2
-
-          # Make executable
+          
+          PROJECT_ROOT=$(dirname "$SETTINGS_PATH")
+          echo "Android project root found at: $PROJECT_ROOT"
+          
+          # Make sure gradlew exists or generate it
+          cd "$PROJECT_ROOT"
+          if [ ! -f "./gradlew" ]; then
+            gradle wrapper --gradle-version 8.2
+          fi
           chmod +x ./gradlew
+          
+          echo "TARGET_DIR=$PROJECT_ROOT" >> $GITHUB_ENV
 
       - name: Run Build
         run: |
+          cd ${{ env.TARGET_DIR }}
           ./gradlew assembleDebug
 
       - name: Upload APK Artifact
