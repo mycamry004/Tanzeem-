@@ -63,12 +63,12 @@ jobs:
       - name: Run Build
         run: |
           cd ${{ env.TARGET_DIR }}
-          ./gradlew assembleDebug --no-configuration-cache --no-daemon
+          # Removed experimental flags that trigger KSP intellij quirks
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Tanzeem-Debug-APK
-          path: |
-            **/build/outputs/apk/deb
-            ug/*.apk
+          path: extracted_project/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
