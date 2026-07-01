@@ -1,4 +1,4 @@
-name: Build Android APK From Zip
+Name: Build Android APK From Zip
 
 on:
   push:
@@ -51,6 +51,14 @@ jobs:
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           
           echo "TARGET_DIR=$PROJECT_ROOT" >> $GITHUB_ENV
+
+      - name: Inject Gemini API Key Secret
+        run: |
+          cd ${{ env.TARGET_DIR }}
+          # Creates a local secrets configuration or .env file inside your project root
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+          echo "api.key=${{ secrets.GEMINI_API_KEY }}" > secrets.properties
+          echo "Injected API Key into project configuration files successfully."
 
       - name: Run Build
         run: |
