@@ -5,9 +5,12 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write # Required for GitHub Actions to create Releases
+
 jobs:
   build:
-    name: Build APK
+    name: Build and Release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -64,7 +67,6 @@ jobs:
         run: |
           cd ${{ env.TARGET_DIR }}
           
-          # Find the app level build.gradle file
           GRADLE_FILE=$(find . -name "build.gradle" -not -path "*/build/*" -print -quit)
           if [ -z "$GRADLE_FILE" ]; then
             GRADLE_FILE=$(find . -name "build.gradle.kts" -not -path "*/build/*" -print -quit)
@@ -72,38 +74,45 @@ jobs:
           
           echo "Found build file to modify: $GRADLE_FILE"
           
-          # Calculate version names dynamically using GitHub run number ($GITHUB_RUN_NUMBER)
-          # Run 1 -> versionCode 1, versionName 1.01
-          # Run 99 -> versionCode 99, versionName 1.99
-          # Run 100 -> versionCode 100, versionName 2.00
           VERSION_CODE=$GITHUB_RUN_NUMBER
-          
           MAJOR=$(( 1 + (VERSION_CODE / 100) ))
           MINOR=$(( VERSION_CODE % 100 ))
-          # Format minor as a two digit number (e.g., 05 instead of 5)
           VERSION_NAME=$(printf "%d.%02d" $MAJOR $MINOR)
           
           echo "Setting automated build parameters..."
           echo "New versionCode: $VERSION_CODE"
           echo "New versionName: $VERSION_NAME"
           
-          # Use sed to overwrite existing versionCode and versionName fields inside your code
           sed -i "s/versionCode\s\+[0-9]\+/versionCode $VERSION_CODE/g" "$GRADLE_FILE"
           sed -i 's/versionName\s\+"[^"]*"/versionName "'"$VERSION_NAME"'"/g' "$GRADLE_FILE"
-          
-          # For Kotlin DSL build.gradle.kts compatibility if needed
           sed -i "s/versionCode\s*=\s*[0-9]\+/versionCode = $VERSION_CODE/g" "$GRADLE_FILE"
           sed -i 's/versionName\s*=\s*"[^"]*"/versionName = "'"$VERSION_NAME"'"/g' "$GRADLE_FILE"
+
+          # Export tag name for Release step
+          echo "RELEASE_TAG=v${VERSION_NAME}" >> $GITHUB_ENV
 
       - name: Run Build
         run: |
           cd ${{ env.TARGET_DIR }}
-          # Removed experimental flags that trigger KSP intellij quirks
           ./gradlew assembleDebug --no-daemon
 
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
+      - name: Locate Built APK
+        run: |
+          APK_PATH=$(find extracted_project -name "*.apk" -print -quit)
+          if [ -z "$APK_PATH" ]; then
+            echo "ERROR: APK file not found!"
+            exit 1
+          fi
+          echo "FOUND_APK=$APK_PATH" >> $GITHUB_ENV
+
+      - name: Create GitHub Release & Upload APK
+        uses: softprops/action-gh-release@v2
         with:
-          name: Tanzeem-Debug-APK
-          path: extracted_project/**/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Release ${{ env.RELEASE_TAG }}
+          body: "Automated update built for repository mycamry004/Tanzeem-."
+          files: ${{ env.FOUND_APK }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
