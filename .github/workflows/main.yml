@@ -49,9 +49,13 @@ jobs:
           gradle wrapper --gradle-version 9.3.1
           chmod +x ./gradlew
           
-          # Force create the missing debug.keystore file required by debugConfig
-          echo "Generating temporary debug keystore..."
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          # USE THE KEYSTORE FROM THE ZIP IF IT EXISTS, OTHERWISE GENERATE A TEMPORARY ONE
+          if [ -f "debug.keystore" ]; then
+            echo "Using permanent debug.keystore included in the ZIP file. Signature will match!"
+          else
+            echo "Warning: No keystore found in ZIP. Generating temporary debug keystore..."
+            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
           
           echo "TARGET_DIR=$PROJECT_ROOT" >> $GITHUB_ENV
 
