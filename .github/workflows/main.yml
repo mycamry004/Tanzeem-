@@ -1,29 +1,4 @@
-name: Build Android APK From Zip
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-
-permissions:
-  contents: write # Required for GitHub Actions to create Releases
-
-jobs:
-  build:
-    name: Build and Release APK
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Find and Extract Project Zip
+- name: Find and Extract Project Zip
         run: |
           ZIP_FILE=$(find . -name "*.zip" -print -quit)
           
@@ -49,74 +24,7 @@ jobs:
           gradle wrapper --gradle-version 9.3.1
           chmod +x ./gradlew
           
-          # USE THE KEYSTORE FROM THE ZIP IF IT EXISTS, OTHERWISE GENERATE A TEMPORARY ONE
-          if [ -f "debug.keystore" ]; then
-            echo "Using permanent debug.keystore included in the ZIP file. Signature will match!"
-          else
-            echo "Warning: No keystore found in ZIP. Generating temporary debug keystore..."
-            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          fi
+          # USE THE PERMANENT KEYSTORE (PREVENTS UPDATE CONFLICTS)
+          echo "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" | base64 -d > debug.keystore
           
           echo "TARGET_DIR=$PROJECT_ROOT" >> $GITHUB_ENV
-
-      - name: Inject Gemini API Key Secret
-        run: |
-          cd ${{ env.TARGET_DIR }}
-          # Creates a local secrets configuration or .env file inside your project root
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
-          echo "api.key=${{ secrets.GEMINI_API_KEY }}" > secrets.properties
-          echo "Injected API Key into project configuration files successfully."
-
-      - name: Auto-Increment App Version Numbers
-        run: |
-          cd ${{ env.TARGET_DIR }}
-          
-          GRADLE_FILE=$(find . -name "build.gradle" -not -path "*/build/*" -print -quit)
-          if [ -z "$GRADLE_FILE" ]; then
-            GRADLE_FILE=$(find . -name "build.gradle.kts" -not -path "*/build/*" -print -quit)
-          fi
-          
-          echo "Found build file to modify: $GRADLE_FILE"
-          
-          VERSION_CODE=$GITHUB_RUN_NUMBER
-          MAJOR=$(( 1 + (VERSION_CODE / 100) ))
-          MINOR=$(( VERSION_CODE % 100 ))
-          VERSION_NAME=$(printf "%d.%02d" $MAJOR $MINOR)
-          
-          echo "Setting automated build parameters..."
-          echo "New versionCode: $VERSION_CODE"
-          echo "New versionName: $VERSION_NAME"
-          
-          sed -i "s/versionCode\s\+[0-9]\+/versionCode $VERSION_CODE/g" "$GRADLE_FILE"
-          sed -i 's/versionName\s\+"[^"]*"/versionName "'"$VERSION_NAME"'"/g' "$GRADLE_FILE"
-          sed -i "s/versionCode\s*=\s*[0-9]\+/versionCode = $VERSION_CODE/g" "$GRADLE_FILE"
-          sed -i 's/versionName\s*=\s*"[^"]*"/versionName = "'"$VERSION_NAME"'"/g' "$GRADLE_FILE"
-
-          # Export tag name for Release step
-          echo "RELEASE_TAG=v${VERSION_NAME}" >> $GITHUB_ENV
-
-      - name: Run Build
-        run: |
-          cd ${{ env.TARGET_DIR }}
-          ./gradlew assembleDebug --no-daemon
-
-      - name: Locate Built APK
-        run: |
-          APK_PATH=$(find extracted_project -name "*.apk" -print -quit)
-          if [ -z "$APK_PATH" ]; then
-            echo "ERROR: APK file not found!"
-            exit 1
-          fi
-          echo "FOUND_APK=$APK_PATH" >> $GITHUB_ENV
-
-      - name: Create GitHub Release & Upload APK
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: Release ${{ env.RELEASE_TAG }}
-          body: "Automated update built for repository mycamry004/Tanzeem-."
-          files: ${{ env.FOUND_APK }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
